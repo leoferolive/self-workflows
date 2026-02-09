@@ -1,6 +1,6 @@
 {
   "name": "@leoferolive/self-workflows",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI scaffolding tool for deploying applications to K3s with GitHub Actions",
   "main": "index.js",
   "bin": {
