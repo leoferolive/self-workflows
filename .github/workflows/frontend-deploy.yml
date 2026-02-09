@@ -36,9 +36,6 @@ on:
       KUBECONFIG:
         required: true
         description: 'Kubeconfig em base64'
-      GITHUB_TOKEN:
-        required: true
-        description: 'GitHub token for GHCR authentication'
 
 env:
   REGISTRY: ghcr.io
