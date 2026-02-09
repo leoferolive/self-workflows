@@ -26,6 +26,19 @@ on:
         type: string
         default: './k8s'
         description: 'Pasta com manifests Kubernetes'
+    secrets:
+      TS_OAUTH_CLIENT_ID:
+        required: true
+        description: 'Tailscale OAuth Client ID'
+      TS_OAUTH_SECRET:
+        required: true
+        description: 'Tailscale OAuth Secret'
+      KUBECONFIG:
+        required: true
+        description: 'Kubeconfig em base64'
+      GITHUB_TOKEN:
+        required: true
+        description: 'GitHub token for GHCR authentication'
 
 env:
   REGISTRY: ghcr.io
