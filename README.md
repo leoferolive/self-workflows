@@ -101,9 +101,8 @@ Após criar a aplicação e fazer push para o GitHub, configure os seguintes sec
 
 ### Secrets Necessários
 
-1. **TS_OAUTH_CLIENT_ID** - OAuth Client ID do Tailscale
-2. **TS_OAUTH_SECRET** - OAuth Secret do Tailscale
-3. **KUBECONFIG** - Config do K3s em base64
+1. **TAILSCALE_AUTHKEY** - Auth key do Tailscale
+2. **KUBECONFIG** - Config do K3s em base64
 
 ### Gerar KUBECONFIG em Base64
 
@@ -180,7 +179,7 @@ Este projeto está licenciado sob a licença ISC - veja o arquivo [LICENSE](LICE
 
 ## Autor
 
-**Leo Ferolive**
+**LeoFerOlive**
 
 ## Links
 

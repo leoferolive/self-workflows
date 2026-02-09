@@ -95,7 +95,7 @@ program
         console.log(chalk.white(`   3. Crie o Dockerfile (ou use o template incluído)`));
         console.log(chalk.white(`   4. git init && git add . && git commit -m "Initial commit"`));
         console.log(chalk.white(`   5. Crie repo no GitHub e faça push`));
-        console.log(chalk.white(`   6. Configure os secrets no GitHub (TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET, KUBECONFIG)`));
+        console.log(chalk.white(`   6. Configure os secrets no GitHub (TAILSCALE_AUTHKEY, KUBECONFIG)`));
         console.log(chalk.white(`   7. git push origin main - Deploy automático! 🎉\n`));
     });
 
