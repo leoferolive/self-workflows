@@ -23,6 +23,18 @@ O **self-workflows** fornece:
 
 ## Instalação
 
+### Opção 1: Via npm (Recomendado)
+
+```bash
+# Instalar globalmente
+npm install -g @leoferolive/self-workflows
+
+# Ou usar diretamente com npx (sem instalação)
+npx @leoferolive/self-workflows backend minha-api -u leoferolive
+```
+
+### Opção 2: Via Git Clone (Desenvolvimento)
+
 ```bash
 # Clonar repositório
 git clone https://github.com/leoferolive/self-workflows.git
@@ -64,6 +76,13 @@ new-app frontend meu-app \
   --domain example.com \
   --node-version 18 \
   --replicas 2
+```
+
+### Uso via npx (Sem Instalação)
+
+```bash
+npx @leoferolive/self-workflows backend minha-api -u leoferolive
+npx @leoferolive/self-workflows frontend meu-app -u leoferolive
 ```
 
 ### Opções Disponíveis
@@ -167,6 +186,45 @@ self-workflows/
 ```bash
 # Executar sem instalar globalmente
 node scripts/new-app.js backend test-app -u leoferolive
+```
+
+## Desenvolvimento
+
+### Configurar Ambiente
+
+```bash
+# Clonar repositório
+git clone https://github.com/leoferolive/self-workflows.git
+cd self-workflows
+
+# Instalar dependências
+npm install
+
+# Criar link global para testes locais
+npm link
+```
+
+### Scripts Disponíveis
+
+```bash
+npm run dev          # Executa CLI localmente
+npm run test         # Executa testes
+npm run lint         # Verifica qualidade do código
+npm run lint:fix     # Corrige problemas automaticamente
+npm run format       # Formata código
+npm run format:check # Verifica formatação
+```
+
+### Publicar Nova Versão
+
+```bash
+# 1. Atualizar versão (cria tag e auto-commit)
+npm version major|minor|patch
+
+# 2. Fazer push da tag
+git push origin main --tags
+
+# 3. GitHub Actions publica automaticamente no npm
 ```
 
 ## Contribuindo

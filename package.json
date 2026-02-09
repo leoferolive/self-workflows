@@ -1,13 +1,27 @@
 {
-  "name": "self-workflows",
+  "name": "@leoferolive/self-workflows",
   "version": "1.0.0",
   "description": "CLI scaffolding tool for deploying applications to K3s with GitHub Actions",
   "main": "index.js",
   "bin": {
     "new-app": "./scripts/new-app.js"
   },
+  "files": [
+    "scripts/new-app.js",
+    "templates/",
+    ".github/workflows/deploy.yml",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "test": "echo \"Ainda não implementado\" && exit 0"
+    "prepublishOnly": "npm run test && npm run lint",
+    "prepack": "npm run test",
+    "test": "node --test scripts/new-app.test.js",
+    "lint": "eslint scripts/*.js",
+    "lint:fix": "eslint scripts/*.js --fix",
+    "format": "prettier --write scripts/*.js",
+    "format:check": "prettier --check scripts/*.js",
+    "dev": "node scripts/new-app.js"
   },
   "repository": {
     "type": "git",
@@ -28,6 +42,12 @@
   "author": "Leo Ferolive",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "bugs": {
     "url": "https://github.com/leoferolive/self-workflows/issues"
   },
@@ -35,5 +55,9 @@
   "dependencies": {
     "chalk": "^5.6.2",
     "commander": "^14.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^9.20.1",
+    "prettier": "^3.5.2"
   }
 }

@@ -1,0 +1,43 @@
+# Source control
+.git/
+.gitignore
+
+# Development files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Documentation não essencial
+CONTRIBUTING.md
+CLAUDE.md
+
+# Test files
+scripts/new-app.test.js
+*.test.js
+*.spec.js
+test/
+tests/
+coverage/
+eslint.config.js
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+.tmp/

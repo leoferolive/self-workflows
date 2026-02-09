@@ -8,6 +8,26 @@ Este repositório contém workflows CI/CD reutilizáveis e ferramentas de scaffo
 
 ## Comandos Disponíveis
 
+### Instalação para Uso
+
+#### Via npm (Recomendado)
+```bash
+npm install -g @leoferolive/self-workflows
+```
+
+#### Via npx (Sem Instalação)
+```bash
+npx @leoferolive/self-workflows backend minha-api -u leoferolive
+```
+
+#### Via Git Clone (Desenvolvimento)
+```bash
+git clone https://github.com/leoferolive/self-workflows.git
+cd self-workflows
+npm install
+npm link
+```
+
 ### CLI de Scaffolding
 ```bash
 # Instalar a CLI localmente para desenvolvimento
@@ -144,3 +164,31 @@ Cada template inclui um Dockerfile multi-stage otimizado:
 - Runtime stage: nginx alpine servindo arquivos estáticos
 - Health check via HTTP /
 - Otimizado para SPA (Single Page Applications)
+
+## Publicação no npm
+
+### Criar Conta e Token npm
+
+1. Acessar https://www.npmjs.com/signup e criar conta
+2. Verificar email de confirmação
+3. Acessar https://www.npmjs.com/settings/leoferolive/tokens
+4. Criar "Automation" token (não "Automation" + "Automation")
+5. Copiar o token gerado
+
+### Configurar GitHub
+
+1. Acessar https://github.com/leoferolive/self-workflows/settings/secrets/actions
+2. Adicionar novo secret chamado `NPM_TOKEN`
+3. Colar o token do npm
+
+### Publicar Nova Versão
+
+```bash
+# Atualizar versão (cria tag git e auto-commit)
+npm version major|minor|patch
+
+# Push da tag (triggera GitHub Actions)
+git push origin main --tags
+```
+
+O workflow `.github/workflows/npm-publish.yml` será executado automaticamente e publicará no npm.
