@@ -14,20 +14,34 @@ Este repositório contém workflows CI/CD reutilizáveis e ferramentas de scaffo
 npm link
 
 # Criar nova aplicação
-new-app <backend|frontend> <nome-da-app> [-u github-user]
+new-app <backend|frontend> <nome-da-app> [-u github-user] [options]
 
-# Exemplo:
+# Exemplo básico:
 new-app backend minha-api -u leoferolive
 new-app frontend meu-app -u leoferolive
+
+# Exemplo com opções customizadas:
+new-app backend minha-api \
+  -u leoferolive \
+  --domain example.com \
+  --java-version 17 \
+  --replicas 3
 ```
+
+#### Opções da CLI
+- `-u, --user <github-user>` - Usuário do GitHub (padrão: leoferolive)
+- `-r, --template-repo <repo>` - Repositório de templates (padrão: self-workflows)
+- `--domain <domain>` - Domínio para ingress (padrão: leoferolive.com.br)
+- `--java-version <version>` - Versão do Java para backend (padrão: 21)
+- `--node-version <version>` - Versão do Node.js para frontend (padrão: 20)
+- `--replicas <count>` - Número de réplicas (padrão: 1)
 
 ## Arquitetura
 
 ### Estrutura do Repositório
 ```
 .github/workflows/          # Workflows reutilizáveis (workflow_call)
-├── backend-deploy.yml      # Workflow padrão para backends Java
-└── frontend-deploy.yml     # Workflow padrão para frontends Node.js
+└── deploy.yml              # Workflow unificado para backend e frontend
 
 scripts/
 └── new-app.js              # CLI que scaffolds novas aplicações
@@ -35,9 +49,11 @@ scripts/
 templates/
 ├── backend/                # Template para aplicações backend
 │   ├── .github/workflows/deploy.yml
+│   ├── Dockerfile          # Dockerfile multi-stage Spring Boot
 │   └── k8s/               # Manifests Kubernetes (namespace, service, deployment, ingress)
 └── frontend/              # Template para aplicações frontend
     ├── .github/workflows/deploy.yml
+    ├── Dockerfile          # Dockerfile multi-stage Node.js
     └── k8s/
 ```
 
@@ -45,20 +61,23 @@ templates/
 
 Os workflows em `.github/workflows/` são desenhados para serem consumidos via `workflow_call`. Aplicações criadas com a CLI incluem workflows que chamam estes workflows reutilizáveis usando `secrets: inherit`.
 
-**Backend Deploy Workflow** (`.github/workflows/backend-deploy.yml`):
+**Deploy Workflow Unificado** (`.github/workflows/deploy.yml`):
+- Workflow único que suporta backend e frontend via input `app_type`
 - Build e push de imagem Docker para GHCR (linux/arm64)
 - Deploy em cluster K3s via Tailscale + kubectl
-- Inputs: `app_name`, `app_namespace`, `dockerfile_path`, `java_version`, `k8s_path`
-
-**Frontend Deploy Workflow** (`.github/workflows/frontend-deploy.yml`):
-- Idêntico ao backend, mas sem `java_version` (usa `node_version`)
-- Mesma estratégia de build e deploy
+- Inputs: `app_name`, `app_namespace`, `app_type`, `dockerfile_path`, `java_version` (backend), `node_version` (frontend), `k8s_path`
+- Outputs: `deployment_status`, `image_tag`
 
 ### Template System
 
 Os templates usam placeholders com sintaxe `{{NOME_VARIAVEL}}`:
 - `{{APP_NAME}}` - Nome da aplicação (usado para namespace, deployment, service, ingress)
 - `{{GITHUB_USER}}` - Usuário/organização do GitHub
+- `{{TEMPLATE_REPO}}` - Nome do repositório de templates (padrão: self-workflows)
+- `{{DOMAIN}}` - Domínio para ingress (padrão: leoferolive.com.br)
+- `{{JAVA_VERSION}}` - Versão do Java para backend (padrão: 21)
+- `{{NODE_VERSION}}` - Versão do Node.js para frontend (padrão: 20)
+- `{{REPLICAS}}` - Número de réplicas do deployment (padrão: 1)
 
 A CLI `new-app.js` substitui esses placeholders durante a geração do projeto.
 
@@ -69,14 +88,15 @@ A CLI `new-app.js` substitui esses placeholders durante a geração do projeto.
 - **Cluster**: K3s (homelab)
 - **Networking**: Tailscale para acesso VPN do GitHub Actions ao cluster
 - **Ingress**: Traefik com entrada via `web` entrypoint
-- **Domínio**: `{APP_NAME}.leoferolive.com.br`
+- **Domínio**: `{APP_NAME}.{DOMAIN}` (customizável via `--domain`, padrão: leoferolive.com.br)
 
 ### Secrets Necessários
 
 Aplicações geradas requerem estes secrets no GitHub:
-- `TS_OAUTH_CLIENT_ID` - OAuth client ID do Tailscale
-- `TS_OAUTH_SECRET` - OAuth secret do Tailscale
+- `TAILSCALE_AUTHKEY` - Auth key do Tailscale (não é mais OAuth)
 - `KUBECONFIG` - Config do K3s em base64
+
+**Nota**: Os secrets são passados automaticamente via `secrets: inherit` no workflow call.
 
 ## Convenções de Código
 
@@ -94,9 +114,33 @@ O projeto usa ES Modules (`"type": "module"` em package.json). Em scripts Node.j
 ### Padrões Kubernetes
 - Cada app tem seu próprio namespace com o mesmo nome da app
 - Deployments usam `app: {APP_NAME}` como selector label
+- Número de réplicas configurável via `{{REPLICAS}}` (padrão: 1)
 - Services expõem port 80 internamente, mapeando para a porta do container
-- Ingress usa Traefik com host pattern `{APP_NAME}.leoferolive.com.br`
+- Ingress usa Traefik com host pattern `{APP_NAME}.{DOMAIN}` (customizável)
+
+### Validações de Nome
+A CLI valida o nome da aplicação seguindo as convenções Kubernetes:
+- Apenas letras minúsculas, números e hífens
+- Não pode começar ou terminar com hífen
+- Não pode conter hífens consecutivos
+- Máximo 63 caracteres (limite do Kubernetes)
 
 ### Diferenças Backend vs Frontend
 - **Backend**: Porta 8080, health checks do Spring Actuator, mais recursos (512Mi/1Gi)
 - **Frontend**: Porta 80, health check simples `/`, menos recursos (128Mi/256Mi)
+
+### Dockerfiles Templates
+Cada template inclui um Dockerfile multi-stage otimizado:
+
+**Backend** (`templates/backend/Dockerfile`):
+- Build stage: Maven + Eclipse Temurin JDK `{{JAVA_VERSION}}`
+- Runtime stage: Eclipse Temurin JRE `{{JAVA_VERSION}}`
+- Usa usuário non-root para segurança
+- Health check via `/actuator/health`
+- Cache layer do Maven para builds mais rápidos
+
+**Frontend** (`templates/frontend/Dockerfile`):
+- Build stage: Node.js `{{NODE_VERSION}}` para npm install + build
+- Runtime stage: nginx alpine servindo arquivos estáticos
+- Health check via HTTP /
+- Otimizado para SPA (Single Page Applications)
