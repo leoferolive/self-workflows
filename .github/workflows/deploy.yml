@@ -1,0 +1,131 @@
+name: Deploy to Homelab (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+        description: 'Nome da aplicação (ex: my-app)'
+      app_namespace:
+        required: true
+        type: string
+        description: 'Namespace Kubernetes (ex: my-app)'
+      app_type:
+        required: true
+        type: string
+        description: 'Tipo da aplicação: backend ou frontend'
+      dockerfile_path:
+        required: false
+        type: string
+        default: './Dockerfile'
+        description: 'Caminho do Dockerfile'
+      java_version:
+        required: false
+        type: string
+        default: '21'
+        description: 'Versão do Java (apenas para backend)'
+      node_version:
+        required: false
+        type: string
+        default: '20'
+        description: 'Versão do Node.js (apenas para frontend)'
+      k8s_path:
+        required: false
+        type: string
+        default: './k8s'
+        description: 'Pasta com manifests Kubernetes'
+    secrets:
+      TAILSCALE_AUTHKEY:
+        required: true
+        description: 'Tailscale Auth Key'
+      KUBECONFIG:
+        required: true
+        description: 'Kubeconfig em base64'
+    outputs:
+      deployment_status:
+        description: 'Status do deployment'
+        value: ${{ jobs.deploy.outputs.status }}
+      image_tag:
+        description: 'Tag da imagem implantada'
+        value: ${{ jobs.build-and-push.outputs.image_tag }}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.image-info.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ inputs.dockerfile_path }}
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set Image Tag Output
+        id: image-info
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.deploy-status.outputs.result }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Setup kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to K3s
+        id: deploy-k8s
+        run: |
+          kubectl apply -f ${{ inputs.k8s_path }}/
+          kubectl set image deployment/${{ inputs.app_name }} \
+            ${{ inputs.app_name }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -n ${{ inputs.app_namespace }}
+          kubectl rollout status deployment/${{ inputs.app_name }} \
+            -n ${{ inputs.app_namespace }} \
+            --timeout=300s
+
+      - name: Set Deployment Status
+        id: deploy-status
+        run: echo "result=success" >> $GITHUB_OUTPUT

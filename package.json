@@ -1,20 +1,31 @@
 {
   "name": "self-workflows",
   "version": "1.0.0",
-  "description": "Reusable CI/CD workflows and scaffolding tools for K3s deployments",
+  "description": "CLI scaffolding tool for deploying applications to K3s with GitHub Actions",
   "main": "index.js",
   "bin": {
     "new-app": "./scripts/new-app.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Ainda não implementado\" && exit 0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leoferolive/self-workflows.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "k3s",
+    "kubernetes",
+    "ci-cd",
+    "scaffolding",
+    "github-actions",
+    "docker",
+    "deployment",
+    "homelab",
+    "tailscale",
+    "workflow"
+  ],
+  "author": "Leo Ferolive",
   "license": "ISC",
   "type": "module",
   "bugs": {

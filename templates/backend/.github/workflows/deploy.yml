@@ -6,11 +6,12 @@ on:
 
 jobs:
   deploy:
-    uses: {{GITHUB_USER}}/self-workflows/.github/workflows/backend-deploy.yml@main
+    uses: {{GITHUB_USER}}/{{TEMPLATE_REPO}}/.github/workflows/deploy.yml@main
     with:
       app_name: {{APP_NAME}}
       app_namespace: {{APP_NAME}}
+      app_type: backend
       dockerfile_path: ./Dockerfile
-      java_version: '21'
+      java_version: '{{JAVA_VERSION}}'
       k8s_path: ./k8s
     secrets: inherit
