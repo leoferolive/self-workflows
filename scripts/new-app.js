@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const chalk = require('chalk');
-const fs = require('fs');
-const path = require('path');
+import { program } from 'commander';
+import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Recriar __dirname em ES Modules (necessário porque __dirname não existe nativamente em ESM)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 program
     .name('new-app')
