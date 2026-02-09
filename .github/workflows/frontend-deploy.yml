@@ -1,0 +1,96 @@
+name: Frontend Deploy (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+        description: 'Nome da aplicação (ex: my-app)'
+      app_namespace:
+        required: true
+        type: string
+        description: 'Namespace Kubernetes (ex: my-app)'
+      dockerfile_path:
+        required: false
+        type: string
+        default: './Dockerfile'
+        description: 'Caminho do Dockerfile'
+      node_version:
+        required: false
+        type: string
+        default: '20'
+        description: 'Versão do Node.js'
+      k8s_path:
+        required: false
+        type: string
+        default: './k8s'
+        description: 'Pasta com manifests Kubernetes'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ inputs.dockerfile_path }}
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Setup kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to K3s
+        run: |
+          kubectl apply -f ${{ inputs.k8s_path }}/
+          kubectl set image deployment/${{ inputs.app_name }} \
+            ${{ inputs.app_name }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -n ${{ inputs.app_namespace }}
+          kubectl rollout status deployment/${{ inputs.app_name }} \
+            -n ${{ inputs.app_namespace }} \
+            --timeout=300s

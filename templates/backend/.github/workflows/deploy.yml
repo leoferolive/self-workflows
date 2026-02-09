@@ -1,0 +1,16 @@
+name: Deploy to Homelab
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    uses: {{GITHUB_USER}}/self-workflows/.github/workflows/backend-deploy.yml@main
+    with:
+      app_name: {{APP_NAME}}
+      app_namespace: {{APP_NAME}}
+      dockerfile_path: ./Dockerfile
+      java_version: '21'
+      k8s_path: ./k8s
+    secrets: inherit
