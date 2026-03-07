@@ -47,6 +47,9 @@ on:
       KUBECONFIG:
         required: true
         description: 'Kubeconfig em base64'
+      GHCR_PAT:
+        required: false
+        description: 'Personal Access Token com write:packages (opcional, fallback para GITHUB_TOKEN)'
     outputs:
       deployment_status:
         description: 'Status do deployment'
@@ -80,7 +83,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Build and Push
         id: build
