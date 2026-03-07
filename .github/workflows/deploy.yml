@@ -128,8 +128,7 @@ jobs:
         id: deploy-k8s
         run: |
           kubectl apply -f ${{ inputs.k8s_path }}/
-          kubectl set image deployment/${{ inputs.app_name }} \
-            ${{ inputs.app_name }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }} \
+          kubectl rollout restart deployment/${{ inputs.app_name }} \
             -n ${{ inputs.app_namespace }}
           kubectl rollout status deployment/${{ inputs.app_name }} \
             -n ${{ inputs.app_namespace }} \
