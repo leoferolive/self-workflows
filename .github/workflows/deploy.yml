@@ -40,6 +40,11 @@ on:
         type: string
         default: 'latest'
         description: 'Tag da imagem Docker a publicar/deployar (ex: dev, latest, v1.2.3)'
+      ref:
+        required: false
+        type: string
+        default: ''
+        description: 'Branch, tag ou SHA para checkout antes do build (padrão: SHA do evento)'
     secrets:
       TAILSCALE_AUTHKEY:
         required: true
@@ -74,6 +79,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
