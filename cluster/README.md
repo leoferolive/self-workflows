@@ -58,7 +58,11 @@ zcat pg-all-YYYY-MM-DD.sql.gz | psql -h <host> -U <superuser> postgres
 
 # restaurar UM banco num banco scratch (drill de teste):
 createdb -h <host> -U <superuser> restore_test
-zcat pg-all-YYYY-MM-DD.sql.gz | sed -n '/\\connect nossalista/,/\\connect/p' | psql -h <host> -U <superuser> restore_test
+# ATENÇÃO: o "tail -n +2" é obrigatório — ele remove a linha "\connect <db>";
+# sem isso o psql RECONECTA NO BANCO VIVO e roda o script lá.
+zcat pg-all-YYYY-MM-DD.sql.gz \
+  | sed -n '/^\\connect nossalista$/,/^\\connect /p' | tail -n +2 | sed '$d' \
+  | psql -h <host> -U <superuser> -d restore_test
 ```
 
 Drill de restore deve ser executado após qualquer mudança nestes manifests —
