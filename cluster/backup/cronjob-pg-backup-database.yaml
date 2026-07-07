@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-backup
+  namespace: database
+spec:
+  # 03:20 UTC diário — janela livre (judge roda em 0 */4; rotate-session em 03:00/04:00)
+  schedule: "20 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  # Jobs falhos ficam visíveis para a regra KubeJobFailed (alerta → Telegram)
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          restartPolicy: Never
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: postgres-backup
+          containers:
+            - name: pg-backup
+              # cliente v17 = versão do servidor (postgres:17 no ns database)
+              image: postgres:17-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  F="/backup/pg-all-$(date +%F).sql.gz"
+                  echo "iniciando pg_dumpall -> $F"
+                  pg_dumpall | gzip > "$F"
+                  SIZE=$(stat -c%s "$F")
+                  echo "dump concluído: ${SIZE} bytes"
+                  # dump suspeito de estar vazio = falha (vira alerta)
+                  test "$SIZE" -gt 10240 || { echo "ERRO: dump muito pequeno (${SIZE} bytes)"; exit 1; }
+                  find /backup -name '*.sql.gz' -mtime +14 -delete
+                  echo "backups atuais:"
+                  ls -lh /backup
+              env:
+                - name: PGHOST
+                  value: postgres.database.svc.cluster.local
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-user
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-password
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi

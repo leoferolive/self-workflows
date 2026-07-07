@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ingress-healthcheck
+  namespace: monitoring
+spec:
+  # A cada 15min, em minutos "quebrados" para não coincidir com jobs de hora cheia
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  # Jobs falhos ficam visíveis para a regra KubeJobFailed (alerta → Telegram, latência ~15min)
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # curl já faz retry; sem re-execução do pod
+      backoffLimit: 0
+      activeDeadlineSeconds: 120
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: healthcheck
+              image: curlimages/curl:8.14.1
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -u
+                  # Apenas hosts públicos; endpoints de health quando o app tem um.
+                  # Hosts *.home / -dev são intra-LAN e ficam de fora.
+                  HOSTS="
+                  https://leoferolive.com.br
+                  https://chat.leoferolive.com.br/healthz
+                  https://grafana.leoferolive.com.br
+                  https://nossagrana.leoferolive.com.br
+                  https://api.nossagrana.leoferolive.com.br/health
+                  https://nossalista.leoferolive.com.br/api/health
+                  https://nossoradar.leoferolive.com.br
+                  https://paperclip.leoferolive.com.br
+                  "
+                  FAIL=0
+                  TOTAL=0
+                  for u in $HOSTS; do
+                    TOTAL=$((TOTAL+1))
+                    if curl -fsS -m 10 --retry 2 --retry-delay 5 -o /dev/null "$u"; then
+                      echo "OK   $u"
+                    else
+                      echo "FAIL $u"
+                      FAIL=$((FAIL+1))
+                    fi
+                  done
+                  echo "resultado: ${FAIL} de ${TOTAL} hosts falharam"
+                  [ "$FAIL" -eq 0 ] || exit 1
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 16Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi

@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-backup
+  namespace: nossoradar
+spec:
+  # 03:40 UTC diário — 20min após o backup do Postgres compartilhado (nunca simultâneos)
+  schedule: "40 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          restartPolicy: Never
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: nossoradar-backup
+          containers:
+            - name: pg-backup
+              # cliente v17 = versão do servidor (postgres:17-alpine no StatefulSet)
+              image: postgres:17-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  F="/backup/pg-nossoradar-$(date +%F).sql.gz"
+                  echo "iniciando pg_dumpall -> $F"
+                  pg_dumpall | gzip > "$F"
+                  SIZE=$(stat -c%s "$F")
+                  echo "dump concluído: ${SIZE} bytes"
+                  test "$SIZE" -gt 10240 || { echo "ERRO: dump muito pequeno (${SIZE} bytes)"; exit 1; }
+                  find /backup -name '*.sql.gz' -mtime +14 -delete
+                  echo "backups atuais:"
+                  ls -lh /backup
+              env:
+                - name: PGHOST
+                  # Service headless do StatefulSet
+                  value: nossoradar-postgres.nossoradar.svc.cluster.local
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: nossoradar-postgres-secrets
+                      key: POSTGRES_USER
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: nossoradar-postgres-secrets
+                      key: POSTGRES_PASSWORD
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
