@@ -4,8 +4,11 @@ metadata:
   name: pg-backup
   namespace: database
 spec:
-  # 03:20 UTC diário — janela livre (judge roda em 0 */4; rotate-session em 03:00/04:00)
+  # 03:20 America/Sao_Paulo diário — janela livre (judge tica em 0 */4 e
+  # rotate-session em 03:00/04:00, ambos no fuso do nó). timeZone explícito:
+  # sem ele, o controller avalia o cron no fuso do SISTEMA do nó, não em UTC.
   schedule: "20 3 * * *"
+  timeZone: America/Sao_Paulo
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   # Jobs falhos ficam visíveis para a regra KubeJobFailed (alerta → Telegram)

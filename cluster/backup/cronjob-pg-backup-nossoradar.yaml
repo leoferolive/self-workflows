@@ -4,8 +4,10 @@ metadata:
   name: pg-backup
   namespace: nossoradar
 spec:
-  # 03:40 UTC diário — 20min após o backup do Postgres compartilhado (nunca simultâneos)
+  # 03:40 America/Sao_Paulo diário — 20min após o backup do Postgres
+  # compartilhado (nunca simultâneos)
   schedule: "40 3 * * *"
+  timeZone: America/Sao_Paulo
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3

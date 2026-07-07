@@ -6,6 +6,7 @@ metadata:
 spec:
   # A cada 15min, em minutos "quebrados" para não coincidir com jobs de hora cheia
   schedule: "*/15 * * * *"
+  timeZone: America/Sao_Paulo
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 300
   successfulJobsHistoryLimit: 1

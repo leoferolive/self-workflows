@@ -11,12 +11,16 @@ consistente com o monitoring (que hoje vive em `chat-api/k8s/monitoring/`).
 
 | Manifest | Namespace | Schedule | O que faz |
 | --- | --- | --- | --- |
-| `backup/cronjob-pg-backup-database.yaml` | `database` | `20 3 * * *` (diário 03:20 UTC) | `pg_dumpall` do Postgres compartilhado (nossalista, nossagrana_prod, grafana + roles) → gzip no PVC `postgres-backup` |
-| `backup/cronjob-pg-backup-nossoradar.yaml` | `nossoradar` | `40 3 * * *` (diário 03:40 UTC) | `pg_dumpall` do Postgres do nossoradar → gzip no PVC `nossoradar-backup` |
+| `backup/cronjob-pg-backup-database.yaml` | `database` | `20 3 * * *` (diário 03:20 BRT) | `pg_dumpall` do Postgres compartilhado (nossalista, nossagrana_prod, grafana + roles) → gzip no PVC `postgres-backup` |
+| `backup/cronjob-pg-backup-nossoradar.yaml` | `nossoradar` | `40 3 * * *` (diário 03:40 BRT) | `pg_dumpall` do Postgres do nossoradar → gzip no PVC `nossoradar-backup` |
 | `healthcheck/cronjob-ingress-healthcheck.yaml` | `monitoring` | `*/15 * * * *` | `curl` em todos os hostnames públicos `*.leoferolive.com.br`; falha se ≥1 host falhar |
 
-Horários escolhidos para não colidir com os CronJobs existentes
-(`chat-api-judge` em `0 */4 * * *`, `chat-api-rotate-session` em 03:00/04:00).
+**Timezone**: todos declaram `timeZone: America/Sao_Paulo` explicitamente.
+Sem esse campo, o controller do k3s avalia o cron no fuso do **sistema do nó**
+(que neste cluster é America/Sao_Paulo, não UTC) — um schedule pensado "em UTC"
+dispara 3h depois do esperado. Os CronJobs legados do chat-api (judge em
+`0 */4`, rotate-session em 03:00/04:00) não declaram timeZone e portanto
+ticam no fuso do nó; os horários daqui foram escolhidos para não colidir.
 Todos com `concurrencyPolicy: Forbid` e requests/limits pequenos —
 a memória do nó é o recurso escasso (~90% de uso).
 
