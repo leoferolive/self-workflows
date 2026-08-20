@@ -1,0 +1,55 @@
+extraEnvVars:
+  - name: CHATGPT_TOKEN_DIR
+    value: /var/lib/litellm/chatgpt
+
+# The trailing dot makes this an absolute DNS name. The node resolver's
+# Tailscale search suffix otherwise delays Prisma until its connection timeout.
+db:
+  endpoint: postgres.database.svc.cluster.local.
+
+# Keep the completed migration Job around long enough for Helm --wait to
+# observe it even when a rollout needs troubleshooting.
+migrationJob:
+  ttlSecondsAfterFinished: 1200
+
+volumeMounts:
+  - name: chatgpt-auth
+    mountPath: /var/lib/litellm/chatgpt
+
+volumes:
+  - name: chatgpt-auth
+    persistentVolumeClaim:
+      claimName: litellm-chatgpt-auth
+
+proxy_config:
+  model_list:
+    - model_name: gpt-5.6-sol
+      model_info:
+        mode: responses
+      litellm_params:
+        model: chatgpt/gpt-5.6-sol
+    - model_name: gpt-5.6-terra
+      model_info:
+        mode: responses
+      litellm_params:
+        model: chatgpt/gpt-5.6-terra
+    - model_name: gpt-5.6-luna
+      model_info:
+        mode: responses
+      litellm_params:
+        model: chatgpt/gpt-5.6-luna
+    - model_name: gpt-5.5
+      model_info:
+        mode: responses
+      litellm_params:
+        model: chatgpt/gpt-5.5
+    - model_name: gpt-5.4
+      model_info:
+        mode: responses
+      litellm_params:
+        model: chatgpt/gpt-5.4
+    - model_name: gpt-5.4-mini
+      model_info:
+        mode: responses
+      litellm_params:
+        model: chatgpt/gpt-5.4-mini
